@@ -60,7 +60,6 @@ public class MasterWatcher extends ZkWatcher {
                 case CONNECTIONLOSS:
                     checkMaster();
                     return;
-
                 default:
                     LOGGER.error("Something went wrong when running for master.",
                             KeeperException.create(KeeperException.Code.get(rc), path));
@@ -94,5 +93,29 @@ public class MasterWatcher extends ZkWatcher {
                     }
                 },
                 data);
+    }
+
+    void listenWorkers() {
+        zk.getChildren("/workers", event -> {
+            if (event.getType() == Event.EventType.NodeChildrenChanged) {
+                assert "/workers".equals(event.getPath());
+                listenWorkers();
+            }
+        }, (rc, path, ctx, children) -> {
+            switch (KeeperException.Code.get(rc)) {
+                case CONNECTIONLOSS:
+                    //getWorkerList();
+                    break;
+                case OK:
+                    LOGGER.info("Succesfully got a list of workers: "
+                            + children.size()
+                            + " workers");
+                    //reassignAndSet(children);
+                    break;
+                default:
+                    LOGGER.error("getChildren failed",
+                            KeeperException.create(KeeperException.Code.get(rc), path));
+            }
+        }, null);
     }
 }
