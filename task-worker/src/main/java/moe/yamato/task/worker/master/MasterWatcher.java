@@ -9,14 +9,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.util.UUID;
 
 public class MasterWatcher extends ZkWatcher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MasterWatcher.class);
 
-    private String serverId = "1";
+    private static final String serverId = UUID.randomUUID().toString();
 
-    private boolean isMaster;
+    private static volatile boolean isMaster;
 
     @Inject
     public MasterWatcher(final String hostPort) {
@@ -34,11 +35,15 @@ public class MasterWatcher extends ZkWatcher {
                 case OK:
                     isMaster = true;
                     break;
+                case NODEEXISTS:
+                    break;
                 case CONNECTIONLOSS:
+                    LOGGER.warn("connection loss when create /master");
                     checkMaster();
                     break;
                 default:
-                    isMaster = false;
+                    LOGGER.error("Something went wrong when running for master.",
+                            KeeperException.create(KeeperException.Code.get(rc), path));
                     break;
             }
         }, null);
@@ -47,11 +52,19 @@ public class MasterWatcher extends ZkWatcher {
     private void checkMaster() {
         zk.getData("/master", false, (rc, path, ctx, data, stat) -> {
             switch (KeeperException.Code.get(rc)) {
+                case OK:
+                    break;
+                case NONODE:
+                    runForMaster();
+                    break;
                 case CONNECTIONLOSS:
                     checkMaster();
                     return;
-                case NONODE:
-                    runForMaster();
+
+                default:
+                    LOGGER.error("Something went wrong when running for master.",
+                            KeeperException.create(KeeperException.Code.get(rc), path));
+                    break;
             }
         }, null);
     }

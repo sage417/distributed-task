@@ -9,12 +9,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.util.UUID;
 
 class WorkerWatcher extends ZkWatcher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(WorkerWatcher.class);
 
-    private String serverId = "1";
+    private static final String serverId = UUID.randomUUID().toString();
 
     @Inject
     WorkerWatcher(String hostPort) {
@@ -22,12 +23,13 @@ class WorkerWatcher extends ZkWatcher {
     }
 
     public static void main(String args[]) throws Exception {
-        WorkerWatcher w = new WorkerWatcher(args[0]);
+        WorkerWatcher w = new WorkerWatcher("sagedeMac-mini:2181");
         w.startZk();
         w.register();
         Thread.sleep(30000);
     }
 
+    @Override
     public void process(WatchedEvent e) {
         LOGGER.info(e.toString() + ", " + hostPort);
     }
